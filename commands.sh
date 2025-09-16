@@ -1,0 +1,1 @@
+sbatch -J pm425_N_wo_aman -o ce_pm425_N_wo_aman.out -e pm425_N_wo_aman_err.err --wrap "python 1.create_bcread_dict_ultraplex.py -r1 /lustre1/home/martinmikl/mmikl/data/Admera/June2025/fastqfiles/22007FL-09-01-69_S69_L004_R1_001.fastq.gz -r2 /lustre1/home/martinmikl/mmikl/data/Admera/June2025/fastqfiles/22007FL-09-01-69_S69_L004_R2_001.fastq.gz -o Admera/June2025/CE_HEK_PolII"
