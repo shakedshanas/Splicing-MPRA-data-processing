@@ -1,4 +1,4 @@
-# description
+# Description
 A computational pipeline was developed to describe the entire spectrum of splice site choices from MPRA paired-end RNA sequencing data experiments.  
 The pipeline performs barcode-based demultiplexing, splice-aware read mapping, and quantitative splice site analysis across 9,608 library variants simultaneously.
 This is done using a computational workflow comprising of 3 stages:  
@@ -16,8 +16,8 @@ The pipeline was executed on a high-performance computing cluster with:
 
 
 # Download repository, activate conda environment, download csv and fastq files
-1. intall the repository
-2. create a new working conda environemnt from the `.yml` file: 
+1. Install the repository
+2. Create a new working conda environemnt from the `.yml` file: 
 ```bash
 conda env create -f spl_mpra_map.yml
 ```
@@ -30,7 +30,7 @@ wget <link>41467_2019_12642_MOESM10_ESM.csv.gz  .
 wget <link>ce_istartmaxent5.csv.gz  .
 wget <link>ce_iendmaxent3.csv.gz  .
 ```
-4. download cassette exon FASTQ files 
+4. Download cassette exon FASTQ files 
 
 
 
