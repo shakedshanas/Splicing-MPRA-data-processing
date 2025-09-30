@@ -9,7 +9,8 @@ This is done using a computational workflow comprising of 3 stages:
 ### Computational Requirements
 
 The pipeline was executed on a high-performance computing cluster with:
-- SLURM job scheduling for parallel processing
+- Operating System: Red Hat Enterprise Linux 9 operating system distribution
+- SLURM job scheduling for parallel processing (v23.02.4)
 - Array jobs processing up to 9,608 library variants simultaneously
 - 8 CPU cores per job
 - Temporary directory management for intermediate files
