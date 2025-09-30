@@ -11,6 +11,9 @@ The pipeline performs barcode-based demultiplexing, splice-aware read mapping, a
    b. **ce_istartmaxent5.csv.gz** (library variante donor maxent scores)
    c. **ce_iendmaxent3.csv.gz** (library variante acceptor maxent scores)
 
-``` wget <link>41467_2019_12642_MOESM10_ESM.csv.gz  . ```
-``` wget <link>ce_istartmaxent5.csv.gz  . ```
-``` wget <link>ce_iendmaxent3.csv.gz  . ```
+```bash
+wget <link>41467_2019_12642_MOESM10_ESM.csv.gz  .
+wget <link>ce_istartmaxent5.csv.gz  .
+wget <link>ce_iendmaxent3.csv.gz  .
+```
+
