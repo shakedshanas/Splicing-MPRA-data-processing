@@ -37,6 +37,9 @@ The script imports the MaxEntScorepy module from a local directory, which provid
 1. MaxEnd donor splice site strength score: `ce_istartmaxent5.csv.gz`  
 2. MaxEnt acceptor splice site strength score: `ce_iendmaxent3.csv.gz`  
 
+Both donor and acceptor site score matrices were stored as tab-separated text files with library variant identifiers preserved as the index column and nucleotide positions as column headers. This format allowed efficient loading and lookup during the main analysis pipeline when detected splice junction coordinates required strength score annotation.
+
+
 ## Instructions
 Run the Following:
 ```bash
