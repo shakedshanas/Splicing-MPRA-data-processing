@@ -16,24 +16,28 @@ The pipeline was executed on a high-performance computing cluster with:
 - Temporary directory management for intermediate files
 
 
-# Download repository, activate conda environment, download csv and fastq files
+# Setup pipeline
+
+## Download repository, activate conda environment, download csv and fastq files
 1. Install the repository
 2. Create a new working conda environemnt from the `.yml` file: 
 ```bash
 conda env create -f spl_mpra_map.yml
 ```
-3. download CSV files used in the workflow throught <<link>>  :  
-   a. **41467_2019_12642_MOESM10_ESM.csv.gz** (library variants metadata)  
-   b. **ce_istartmaxent5.csv.gz** (library variante donor maxent scores)  
-   c. **ce_iendmaxent3.csv.gz** (library variante acceptor maxent scores)  
+3. Download cassette exon FASTQ files 
+
+
+# Setup splice strenght score matrices using (maxentpy)[https://github.com/kepbod/maxentpy]
+Pre-computes MaxEnt splice site strength scores for all possible nucleotide positions across all library variant sequences, creating lookup tables that enable rapid score retrieval during the main analysis pipeline.
+Runned by the python script `maxent_table.py`.
 ```bash
-wget <link>41467_2019_12642_MOESM10_ESM.csv.gz  .
-wget <link>ce_istartmaxent5.csv.gz  .
-wget <link>ce_iendmaxent3.csv.gz  .
+python maxent_table.py
 ```
-4. Download cassette exon FASTQ files 
+The script imports the MaxEntScorepy module from a local directory, which provides functions for calculating splice site scores using the Maximum Entropy algorithm. The module includes `load_matrix5()` and `load_matrix3()` functions for loading donor and acceptor site position weight matrices, and `score5()` and `score3()` functions for calculating scores.
 
-
+**Output files:**  
+1. MaxEnd donor splice site strength score: `ce_istartmaxent5.csv.gz`  
+2. MaxEnt acceptor splice site strength score: `ce_iendmaxent3.csv.gz`  
 
 
 # stage 1: Barcode Demultiplexing and Read Assignment
