@@ -3,9 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 import argparse
-from pandas.api.types import is_float_dtype # only for the row with is_float_dtype
 from sys import exit
-import time 
 import re
 # %% 
 ''' 
@@ -28,13 +26,12 @@ updated for 10 Oct 2024
 '''
 # argspars arguments
 parser = argparse.ArgumentParser(description='create a df file for all observed splicing events - if using genomic data, it will be without filetring. otherwise - genomic filtering should be used. ')
-parser.add_argument('--chr', type=str, help='chromosome')
-parser.add_argument('-p', '--pwrdir', type=str, help='path to put all the putouts')
+parser.add_argument('--chr', type=str, help='library variant ID')
+parser.add_argument('-p', '--pwrdir', type=str, help='path to put all the outputs')
 args = parser.parse_args()
 
 # %%
 ''' upload files '''
-''' in cluster '''
 chr = args.chr
 print('library seq: ' + str(chr))
 transcript_path = args.pwrdir + '/'
@@ -43,11 +40,10 @@ if os.path.exists(transcript_path + 'bedfiles/' + 'supbedfile.' + str(chr) + '.b
     bed_file = pd.read_csv(transcript_path + 'bedfiles/' + 'supbedfile.' + str(chr) + '.bed', sep='\t', header=None, 
                            names=['chr', 'StartLeftBlock', 'EndRightBlock', 'Junction_Name', 'Strand','nBlocks', 'BlockSizes', 'BlockStarts', 'cigar', 'sequence'])
 t_nblocks_set = set(bed_file.nBlocks)
-# print(bed_file.head())
-print(t_nblocks_set)
-lib = pd.read_csv('~/ce/41467_2019_12642_MOESM10_ESM.csv', index_col='library index')
-imaxent5 = pd.read_csv('~/ce/ce_istartmaxent5.csv', sep='\t', index_col='library index')
-imaxent3 = pd.read_csv('~/ce/ce_iendmaxent3.csv', sep='\t', index_col='library index')
+
+lib = pd.read_csv('41467_2019_12642_MOESM10_ESM.csv.gz', index_col='library index', compression='gzip')
+imaxent5 = pd.read_csv('ce_istartmaxent5.csv.gz', sep='\t', index_col='library index', compression='gzip')
+imaxent3 = pd.read_csv('ce_iendmaxent3.csv.gz', sep='\t', index_col='library index', compression='gzip')
 
 imaxent5.columns = imaxent5.columns.astype(float).astype(int)
 imaxent3.columns = imaxent3.columns.astype(float).astype(int)
@@ -174,7 +170,6 @@ rename_dict = {1: 'intron1start_o', 2: 'intron1end_o', 3: 'intron2start_o', 4: '
 splicecites_df = bed_file.isoform.str.split('_', expand=True).replace('',0).fillna(0).astype(int)
 print(str(chr) + ' number of junctions: ' + str(len(splicecites_df.columns) -1 ))
 
-# splicecites_df = splicecites_df.rename(columns={col: rename_dict[col] for col in [1,2,3,4] if col in splicecites_df.columns}).drop(columns=0)
 splicecites_df = splicecites_df.rename(columns={col: rename_dict[col] for col in splicecites_df.drop(columns=0).columns}).drop(columns=0)
 bed_file = bed_file.join(splicecites_df)
 
@@ -186,8 +181,8 @@ def maxent(pd_row, s, side, dff):
         return 0, 0
     nucleotides_locations_around = [pd_row['intron' + str(s) + side + '_o'] + n for n in range(-3,4) if pd_row['intron' + str(s) + side + '_o'] + n in dff.columns]
     if len(nucleotides_locations_around) > 1:
-        max_score_local = dff.loc[int(pd_row['chr']), nucleotides_locations_around].max()       # 30 APRL 2025
-        max_nuclt_local = dff.loc[int(pd_row['chr']), nucleotides_locations_around].idxmax()    # 30 APRL 2025
+        max_score_local = dff.loc[int(pd_row['chr']), nucleotides_locations_around].max()       
+        max_nuclt_local = dff.loc[int(pd_row['chr']), nucleotides_locations_around].idxmax()    
         return max_score_local, max_nuclt_local
     elif len(nucleotides_locations_around) == 1:
         return dff.loc[int(chr), nucleotides_locations_around], dff.loc[int(chr), nucleotides_locations_around]
@@ -202,10 +197,10 @@ def makeisoform(pd_row):
     return str(pd_row.chr) + '_' + '_'.join([str(int(e)) for e in l if e > 0])
 # %%
 
-max_underscore_count = max(bed_file.underscorecount.unique())       # 30 APRL 2025
+max_underscore_count = max(bed_file.underscorecount.unique())       
 number_of_exons = int(np.where(max_underscore_count == 4, 3, np.where(max_underscore_count == 2, 2, 0)))
-number_of_introns = number_of_exons - 1                    # 30 APRL 2025
-for intrn_cnt in range(1,number_of_exons  ):               # 30 APRL 2025
+number_of_introns = number_of_exons - 1                    
+for intrn_cnt in range(1,number_of_exons  ):               
     side = 'start'
     # donors
     if 'intron' + str(intrn_cnt) + side + '_o' in bed_file.columns:
@@ -232,7 +227,7 @@ if 'isoform' in bed_file.columns:
     bed_file.drop(columns='isoform', inplace=True)
 if 'underscorecount' in bed_file.columns:
     bed_file.drop(columns='underscorecount', inplace=True)
-# bed_file['isoform'] = bed_file[['chr'] + bed_file.filter(like='_nt').columns.to_list()].apply(lambda x: '_'.join([str(int(e)) for e in x.values if e > 0]) , axis='columns') # 9 MAY 2025
+
 bed_file = bed_file.assign(isoform = bed_file.apply(lambda x: makeisoform(x), axis='columns')   )
 bed_file = bed_file.assign(underscorecount = bed_file.isoform.str.count('_'))
 bed_file = bed_file.drop(columns=['nreads_isoform']).merge(pd.Series(bed_file.groupby('isoform').nreads_isoform.sum(), name = 'nreads_isoform'), left_on='isoform', right_index=True)
@@ -265,6 +260,3 @@ print('end of process for library sequence: ' + chr)
 if os.path.exists(transcript_path + 'csvfiles/') == False:
     os.mkdir(transcript_path + 'csvfiles/')
 bed_file.to_csv(transcript_path + 'csvfiles/'+ chr + '.csv', index=False)
-# if os.path.exists(transcript_path + 'csvfiles/') == False:
-#     os.mkdir(transcript_path + 'csvfiles/')
-# bed_file.to_csv('pm425a'+ chr + '.csv', index=False)
