@@ -27,7 +27,7 @@ conda env create -f spl_mpra_map.yml
 3. Download cassette exon FASTQ files 
 
 
-# Setup splice strenght score matrices using (maxentpy)[https://github.com/kepbod/maxentpy]
+# Setup splice strenght score matrices using [maxentpy](https://github.com/kepbod/maxentpy)
 Pre-computes MaxEnt splice site strength scores for all possible nucleotide positions across all library variant sequences, creating lookup tables that enable rapid score retrieval during the main analysis pipeline.
 Runned by the python script `maxent_table.py`.
 ```bash
