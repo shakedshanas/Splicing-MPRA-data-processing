@@ -30,14 +30,18 @@ conda env create -f spl_mpra_map.yml
 # Setup splice strenght score matrices using [maxentpy](https://github.com/kepbod/maxentpy)
 Pre-computes MaxEnt splice site strength scores for all possible nucleotide positions across all library variant sequences, creating lookup tables that enable rapid score retrieval during the main analysis pipeline.
 Runned by the python script `maxent_table.py`.
-```bash
-python maxent_table.py
-```
+
 The script imports the MaxEntScorepy module from a local directory, which provides functions for calculating splice site scores using the Maximum Entropy algorithm. The module includes `load_matrix5()` and `load_matrix3()` functions for loading donor and acceptor site position weight matrices, and `score5()` and `score3()` functions for calculating scores.
 
 **Output files:**  
 1. MaxEnd donor splice site strength score: `ce_istartmaxent5.csv.gz`  
 2. MaxEnt acceptor splice site strength score: `ce_iendmaxent3.csv.gz`  
+
+## Instructions
+Run the Following:
+```bash
+python maxent_table.py
+```
 
 
 # stage 1: Barcode Demultiplexing and Read Assignment
@@ -69,6 +73,7 @@ Read assignment to library variants employed a two-step barcode identification p
 
 3. **Library Assignment**: Extracted barcodes were matched against the pre-constructed barcode dictionary using exact string matching. Successfully matched reads were assigned to their corresponding library variants, with read identifiers stored in variant-specific lists.
 
+
 #### Quality Control and Statistics
 
 The demultiplexing process tracked several quality metrics:
@@ -79,7 +84,20 @@ The demultiplexing process tracked several quality metrics:
 
 Read assignment results were serialized using Python's pickle module for efficient downstream processing.
 
-## Stage 2: Reference Construction and Read Mapping
+## Instructions
+
+1. Edit the file `1.activate_1.create_bcread_dic.sh`:
+    a. Change the path and FASTQ files for `read1` and `read2`
+    b. Name an output directory to be created. 
+2. Run the file
+
+Or directly run:
+```bash
+sbatch -J <output_dir_name> -o <output_dir_name>.out -e <output_dir_name>.err --wrap "python 1.create_bcread_dict.py -r1 <read1>.fastq.gz -r2 <read2>.fastq.gz -o <output_dir_name>"
+```
+
+
+# Stage 2: Reference Construction and Read Mapping
 
 #### Synthetic Reference Generation
 
@@ -127,7 +145,27 @@ Mapping statistics were collected including:
 - Reads without splice junctions
 - Reads with soft-clipping (CIGAR 'S' operations)
 
-## Stage 3: Splice Site Detection and Quantification
+
+
+## Instructions
+
+1. Edit the file `2.ce.activate_star_pipeline.sh`:
+    a. Within the python run command line change:
+         i. The path and FASTQ files for `read1` and `read2` (to be identical as the former sh script)
+         ii. The path assigned for `--pwrdir` means path workking directory, change it to the output directory.
+    b. Change the following parameters:
+   ```bash
+   --job-name= <change_job_name>
+   --output=<change_path>/.%A_%a.output
+   --partition=<change_slurm_partition_to_run_1_day>
+   ```
+2. Run the file
+
+These instructions will run the script `ce.pipeline.py`.
+
+
+
+# Stage 3: Splice Site Detection and Quantification
 
 #### BAM to BED Conversion
 
@@ -188,6 +226,11 @@ Unique isoforms were defined by their complete set of splice junction coordinate
 - Number of exons per isoform
 - Exon length measurements for multi-exonic isoforms
 
+
+## Instructions
+No running instructions since the script `ce.pipeline.py` will run the script `ce.detect_splicesites.py` automatically.
+
+
 # Stage 4: Data Integration and Output
 
 #### Result Compilation
@@ -207,4 +250,17 @@ Results were exported as comma-separated value (CSV) files containing one row pe
 - Splice site coordinates and scores
 - Quantification metrics
 - Quality control flags
+
+
+## Instructions  
+
+While running the command:
+```bash
+python 3.ce.concat.py -p <path_of_inputs_directory> -n <prefix_for_output_filename>
+```
+
+the `-p` flag input string should be identical to the `<output_dir_name>` when the script `1.create_bcread_dict.py` was run.
+
+## Output file  
+On the same directory the scripts are placed, the integrated splice isoform descriptions are shown.
 
