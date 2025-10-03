@@ -28,16 +28,12 @@ conda env create -f spl_mpra_map.yml
 
 
 # Setup splice strenght score matrices using [maxentpy](https://github.com/kepbod/maxentpy)
-Pre-computes MaxEnt splice site strength scores for all possible nucleotide positions across all library variant sequences, creating lookup tables that enable rapid score retrieval during the main analysis pipeline.
-Runned by the python script `maxent_table.py`.
-
-The script imports the MaxEntScorepy module from a local directory, which provides functions for calculating splice site scores using the Maximum Entropy algorithm. The module includes `load_matrix5()` and `load_matrix3()` functions for loading donor and acceptor site position weight matrices, and `score5()` and `score3()` functions for calculating scores.
+Pre-computes MaxEnt splice site strength scores for all possible nucleotide positions across all library variant sequences.
+The script imports the maxentpy module from a local directory (`MaxEntScorepy`), which provides functions for calculating splice site scores using the Maximum Entropy algorithm. The module includes `load_matrix5()` and `load_matrix3()` functions for loading donor and acceptor site position weight matrices, and `score5()` and `score3()` functions for calculating scores.
 
 **Output files:**  
-1. MaxEnd donor splice site strength score: `ce_istartmaxent5.csv.gz`  
+1. MaxEnt donor splice site strength score: `ce_istartmaxent5.csv.gz`  
 2. MaxEnt acceptor splice site strength score: `ce_iendmaxent3.csv.gz`  
-
-Both donor and acceptor site score matrices were stored as tab-separated text files with library variant identifiers preserved as the index column and nucleotide positions as column headers. This format allowed efficient loading and lookup during the main analysis pipeline when detected splice junction coordinates required strength score annotation.
 
 
 ## Instructions
@@ -51,16 +47,7 @@ python maxent_table.py
 
 ## Input Data Processing
 
-Paired-end FASTQ files (R1 and R2) from multiplexed sequencing experiments were processed using a custom Python script (`1.create_bcread_dict.py`) built on BioPython.  
-The pipeline accepts gzip-compressed FASTQ files and processes them iteratively to minimize memory usage.
-
-## Library Reference Construction
-
-Library variant information was loaded from a CSV reference file containing:
-- Library index identifiers  
-- Complete sequence constructs  
-- 12-nucleotide barcode sequences extracted from positions 18-30 of each construct  
-- Associated metadata including gene names, subset classifications, and expected splice sites  
+Paired-end FASTQ files (read1 and read2) from multiplexed sequencing experiments were processed using a custom Python script (`1.create_bcread_dict.py`) built on BioPython.  
 
 ## Barcode Identification and Mapping
 
@@ -68,24 +55,11 @@ Read assignment to library variants employed a two-step barcode identification p
 
 1. **Constant Region Location**: Each read was scanned for the 10-nucleotide constant region sequence `CGGTATGCGC` using Python's string `find()` method. This sequence represents the terminal portion of the constant region, chosen to minimize false positives while maintaining mapping specificity.
 
-2. **Barcode Extraction**: Upon constant region detection, the subsequent 12 nucleotides were extracted as the putative barcode sequence. The barcode coordinates were calculated as:
-   ```python
-   barcode_start = constant_region_position + 10
-   barcode_end = barcode_start + 12
-   ```
+2. **Barcode Extraction**: Upon a constant region detection, the following 12 nucleotides were extracted as the putative barcode sequence.
 
 3. **Library Assignment**: Extracted barcodes were matched against the pre-constructed barcode dictionary using exact string matching. Successfully matched reads were assigned to their corresponding library variants, with read identifiers stored in variant-specific lists.
 
-
-#### Quality Control and Statistics
-
-The demultiplexing process tracked several quality metrics:
-- Total read count processed
-- Successfully mapped reads per library variant
-- Unmapped reads due to absent constant regions
-- Unmapped reads with unrecognized barcodes
-
-Read assignment results were serialized using Python's pickle module for efficient downstream processing.
+Read assignment results were serialized using Python's pickle module for efficient processing reads from every library variants simultaneously.
 
 ## Instructions
 
@@ -100,21 +74,16 @@ sbatch -J <output_dir_name> -o <output_dir_name>.out -e <output_dir_name>.err --
 ```
 
 
-# Stage 2: Reference Construction and Read Mapping
+# Stage 2: Mapping Reads corresponding to library every library variant
 
-#### Synthetic Reference Generation
+For per variant mapping using STAR mapper. Mapping will be proceed after the following processes are done: 
+1. Pair-read FASTQ of a single library variant
+2. STAR Reference Genome files for a single library variant
 
-For each library variant, a synthetic reference sequence was constructed by concatenating:
 
-1. **Variable Region 1**: Nucleotides 0-30 from the library sequence
-2. **Constant Region 1**: 288-nucleotide linker sequence containing regulatory elements
-3. **Variable Region 2**: Nucleotides 45 to end of library sequence  
-4. **Constant Region 2**: 1,839-nucleotide 3' region containing reporter genes and regulatory sequences
+#### Synthetic Reference Generation and Genome indexing with STAR
 
-Two versions of Constant Region 2 were maintained depending on whether CASLIB primers were used in library construction, differing in a 25-nucleotide sequence modification.
-
-#### STAR Genome Indexing
-
+For each library variant, a synthetic reference sequence was constructed.  
 Individual STAR genome indices were generated for each library variant using the following parameters:
 - `--genomeSAindexNbases 4`: Optimized for short reference sequences
 - `--runThreadN 8`: Parallel processing on 8 CPU cores
@@ -149,7 +118,6 @@ Mapping statistics were collected including:
 - Reads with soft-clipping (CIGAR 'S' operations)
 
 
-
 ## Instructions
 
 1. Edit the file `2.ce.activate_star_pipeline.sh`:
@@ -164,7 +132,7 @@ Mapping statistics were collected including:
    ```
 2. Run the file
 
-These instructions will run the script `ce.pipeline.py`.
+These instructions will run the script `ce.pipeline.py` as a job array of ~9600 jobs (one job per library variant).
 
 
 
@@ -176,8 +144,7 @@ Aligned reads were converted to BED12 format using bedtools with preservation of
 ```bash
 bamToBed -split -bed12 -i input.bam
 ```
-
-Additional read sequence and CIGAR string information were extracted using samtools and merged with BED coordinates to create comprehensive splice junction records.
+Additional read sequence and CIGAR string information were extracted using SAMtools and merged with BED coordinates to create comprehensive splice junction records.
 
 #### Paired-Read Integration
 
@@ -185,13 +152,6 @@ Since the analysis used paired-end sequencing, forward and reverse read informat
 1. Separating even-indexed (forward) and odd-indexed (reverse) records
 2. Joining paired records based on read identifiers
 3. Combining block coordinate information from both reads
-
-#### Splice Junction Coordinate Extraction
-
-For multi-block alignments (indicating splice junctions), intron coordinates were calculated using block size and start position information:
-
-- **Intron Start Coordinates**: `StartLeftBlock + BlockSize[i]`
-- **Intron End Coordinates**: `StartLeftBlock + BlockStart[i+1]`
 
 Up to two introns per transcript isoform were supported, accommodating sequences with up to three exons.
 
@@ -203,22 +163,10 @@ Multiple quality control filters were applied:
 2. **Deletion Filters**: Reads with >4 nucleotides of deletions (CIGAR 'D' operations) were excluded
 3. **Complexity Filters**: Maximum of 3 exons per isoform were allowed
 4. **Position Filters**: Reads mapping with start positions >600 nucleotides were excluded to eliminate mis-mapping artifacts
-5. **Isoform Complexity**: Maximum of 4 splice junctions per unique isoform
 
 #### MaxEnt Splice Site Scoring
 
-Splice site strength was evaluated using MaxEnt algorithm scores:
-
-1. **Donor Sites (5' splice sites)**: Scored using position weight matrices for GT dinucleotides and surrounding sequence context
-2. **Acceptor Sites (3' splice sites)**: Scored using matrices for AG dinucleotides and branch point regions
-
-For each detected splice site, the algorithm searched a 7-nucleotide window (±3 nucleotides) around the detected position to identify the optimal splice site and assign the maximum score within this region.
-
-#### Canonical Splice Site Classification
-
-Splice sites were classified as canonical or non-canonical based on dinucleotide composition:
-- **Canonical donor sites**: GT dinucleotide at positions +1/+2 of introns
-- **Canonical acceptor sites**: AG dinucleotide at positions -2/-1 of introns
+Splice site strength was evaluated using MaxEnt algorithm scores. For each detected splice site, the algorithm searched a 7-nucleotide window (±3 nucleotides downstream and upstread apart) around the detected position to identify the optimal splice site and assign the maximum score within this region.
 
 #### Isoform Quantification
 
@@ -265,5 +213,5 @@ python 3.ce.concat.py -p <path_of_inputs_directory> -n <prefix_for_output_filena
 the `-p` flag input string should be identical to the `<output_dir_name>` when the script `1.create_bcread_dict.py` was run.
 
 ## Output file  
-On the same directory the scripts are placed, the integrated splice isoform descriptions are shown.
+On the same directory the scripts are found, the integrated splice isoform descriptions are shown in a CSV file.
 
