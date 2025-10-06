@@ -1,4 +1,5 @@
 # Description
+Mapping and upstream analysis pipeline for Illumina reads from splicing MPRA experiments. The aim is to detect splicing isoforms in an unbiased manner.
 A computational pipeline was developed to describe the entire spectrum of splice site choices from MPRA paired-end RNA sequencing data experiments.  
 The pipeline performs barcode-based demultiplexing, splice-aware read mapping, and quantitative splice site analysis across 9,608 library variants simultaneously.
 This is done using a computational workflow comprising of 3 stages:  
